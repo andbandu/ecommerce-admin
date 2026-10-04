@@ -30,6 +30,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import ProductsIcon from '@mui/icons-material/Inventory2';
+import CategoryIcon from '@mui/icons-material/Category';
 import OrdersIcon from '@mui/icons-material/ShoppingCart';
 import CustomersIcon from '@mui/icons-material/People';
 import SettingsIcon from '@mui/icons-material/Settings';
@@ -46,6 +47,7 @@ const DRAWER_WIDTH = 260;
 const NAV_ITEMS = [
   { label: 'Dashboard', path: '/dashboard', icon: <DashboardIcon /> },
   { label: 'Products', path: '/products', icon: <ProductsIcon /> },
+  { label: 'Categories', path: '/categories', icon: <CategoryIcon /> },
   { label: 'Orders', path: '/orders', icon: <OrdersIcon /> },
   { label: 'Customers', path: '/customers', icon: <CustomersIcon /> },
   { label: 'Settings', path: '/settings', icon: <SettingsIcon /> },
