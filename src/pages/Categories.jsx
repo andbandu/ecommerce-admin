@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Alert,
@@ -43,88 +43,22 @@ import InventoryIcon from '@mui/icons-material/Inventory2';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import { useCategoryStore } from '../store/categoryStore';
 
-// Initial category dataset
-const INITIAL_CATEGORIES = [
-  {
-    id: 'CAT-1',
-    name: 'Electronics & Gadgets',
-    slug: 'electronics-gadgets',
-    parent: 'None (Top Level)',
-    description: 'Smartphones, premium headphones, laptops, and smart home appliances.',
-    productCount: 142,
-    order: 1,
-    status: 'Active',
-    color: '#1e40af', // Deep blue
-    image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=200&q=80',
-  },
-  {
-    id: 'CAT-2',
-    name: 'Apparel & Clothing',
-    slug: 'apparel-clothing',
-    parent: 'None (Top Level)',
-    description: 'Men & women outerwear, athletic apparel, designer jackets, and loungewear.',
-    productCount: 218,
-    order: 2,
-    status: 'Active',
-    color: '#6366f1', // Indigo
-    image: 'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?auto=format&fit=crop&w=200&q=80',
-  },
-  {
-    id: 'CAT-3',
-    name: 'Wearables & Smart Tech',
-    slug: 'wearables-smart-tech',
-    parent: 'Electronics & Gadgets',
-    description: 'Fitness trackers, luxury smartwatches, and wireless biometric sensors.',
-    productCount: 64,
-    order: 3,
-    status: 'Active',
-    color: '#0284c7', // Sky blue
-    image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=200&q=80',
-  },
-  {
-    id: 'CAT-4',
-    name: 'Footwear & Athletic',
-    slug: 'footwear-athletic',
-    parent: 'None (Top Level)',
-    description: 'Running shoes, casual sneakers, boots, and training sports gear.',
-    productCount: 95,
-    order: 4,
-    status: 'Active',
-    color: '#10b981', // Emerald
-    image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=200&q=80',
-  },
-  {
-    id: 'CAT-5',
-    name: 'Workplace & Accessories',
-    slug: 'workplace-accessories',
-    parent: 'None (Top Level)',
-    description: 'Minimalist leather desk pads, carry backpacks, cable organizers, and stands.',
-    productCount: 88,
-    order: 5,
-    status: 'Active',
-    color: '#f59e0b', // Amber
-    image: 'https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?auto=format&fit=crop&w=200&q=80',
-  },
-  {
-    id: 'CAT-6',
-    name: 'Home & Kitchen Decor',
-    slug: 'home-kitchen',
-    parent: 'None (Top Level)',
-    description: 'Modern cookware, aesthetic ceramic tableware, and living room organizers.',
-    productCount: 41,
-    order: 6,
-    status: 'Hidden',
-    color: '#8b5cf6', // Violet
-    image: 'https://images.unsplash.com/photo-1583847268964-b28dc8f51f92?auto=format&fit=crop&w=200&q=80',
-  },
-];
+
+
 
 const PRESET_COLORS = ['#1e40af', '#6366f1', '#0284c7', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#0f172a'];
 
 export default function Categories() {
   const navigate = useNavigate();
-  const [categories, setCategories] = useState(INITIAL_CATEGORIES);
+  const { 
+    categories, 
+    fetchCategories, 
+    addCategory, 
+    editCategory, 
+    removeCategory 
+  } = useCategoryStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [sortBy, setSortBy] = useState('order');
@@ -142,6 +76,10 @@ export default function Categories() {
     status: 'Active',
     color: '#1e40af',
   });
+
+  useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
 
   // Snackbar notifications
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
@@ -197,7 +135,7 @@ export default function Categories() {
     setModalOpen(true);
   };
 
-  // Submit Add / Edit
+ // Submit Add / Edit
   const handleFormSubmit = (e) => {
     e.preventDefault();
     if (!formData.name.trim()) {
@@ -206,28 +144,22 @@ export default function Categories() {
     }
 
     if (editingId) {
-      // Update existing
-      setCategories((prev) =>
-        prev.map((c) =>
-          c.id === editingId
-            ? {
-                ...c,
-                name: formData.name,
-                slug: formData.slug || formData.name.toLowerCase().replace(/\s+/g, '-'),
-                parent: formData.parent,
-                description: formData.description,
-                order: parseInt(formData.order, 10) || 1,
-                status: formData.status,
-                color: formData.color,
-              }
-            : c
-        )
-      );
+      // 1. Update existing - Zustand 'editCategory' action එක භාවිතය
+      editCategory(editingId, {
+        name: formData.name,
+        slug: formData.slug || formData.name.toLowerCase().replace(/\s+/g, '-'),
+        parent: formData.parent,
+        description: formData.description,
+        order: parseInt(formData.order, 10) || 1,
+        status: formData.status,
+        color: formData.color,
+      });
+      
       setSnackbar({ open: true, message: `Category "${formData.name}" updated successfully!`, severity: 'success' });
     } else {
-      // Create new
+      // 2. Create new - Zustand 'addCategory' action එක භාවිතය
       const created = {
-        id: `CAT-${Math.floor(100 + Math.random() * 900)}`,
+        id: `CAT-${Math.floor(100 + Math.random() * 900)}`, // සාමාන්‍යයෙන් මේක backend එකෙන් හැදෙන්නෙ. දැනට මෙහෙම තියමු.
         name: formData.name,
         slug: formData.slug || formData.name.toLowerCase().replace(/\s+/g, '-'),
         parent: formData.parent,
@@ -238,7 +170,9 @@ export default function Categories() {
         color: formData.color,
         image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=200&q=80',
       };
-      setCategories([created, ...categories]);
+      
+      addCategory(created); // Zustand හරහා අලුත් එක එකතු කිරීම
+      
       setSnackbar({ open: true, message: `Category "${formData.name}" created successfully!`, severity: 'success' });
     }
 
@@ -248,9 +182,10 @@ export default function Categories() {
   // Toggle Visibility status (Active <-> Hidden)
   const handleToggleStatus = (id, currentStatus) => {
     const newStatus = currentStatus === 'Active' ? 'Hidden' : 'Active';
-    setCategories((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, status: newStatus } : c))
-    );
+    
+    // Zustand 'editCategory' හරහා status එක පමණක් update කිරීම
+    editCategory(id, { status: newStatus });
+    
     setSnackbar({
       open: true,
       message: `Category visibility updated to "${newStatus}"`,
@@ -260,7 +195,7 @@ export default function Categories() {
 
   // Delete Category
   const handleDeleteCategory = (id, name) => {
-    setCategories((prev) => prev.filter((c) => c.id !== id));
+    removeCategory(id);
     setSnackbar({ open: true, message: `Category "${name}" deleted.`, severity: 'info' });
   };
 
