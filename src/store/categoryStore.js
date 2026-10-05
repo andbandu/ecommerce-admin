@@ -28,13 +28,20 @@ export const useCategoryStore = create((set, get) => ({
 
   // 3. Update Category
   editCategory: async (id, categoryData) => {
-    set({ isLoading: true });
+    // Optimistic update for instantaneous toggle & UI responsiveness
+    set((state) => ({
+      categories: state.categories.map((cat) =>
+        cat.id === id ? { ...cat, ...categoryData } : cat
+      ),
+    }));
     try {
       await updateCategory(id, categoryData);
-      get().fetchCategories();
+      const categories = await fetchCategoriesFromService();
+      set({ categories, isLoading: false });
     } catch (error) {
       console.error("Error updating category", error);
-      set({ isLoading: false });
+      const categories = await fetchCategoriesFromService();
+      set({ categories, isLoading: false });
     }
   },
 

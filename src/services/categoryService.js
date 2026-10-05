@@ -92,7 +92,7 @@ export const createCategory = async (categoryData) => {
 export const updateCategory = async (id, categoryData) => {
   await delay(500);
   INITIAL_CATEGORIES = INITIAL_CATEGORIES.map((cat) => 
-    cat.id === id ? { ...categoryData, id } : cat
+    cat.id === id ? { ...cat, ...categoryData, id } : cat
   );
   return { data: categoryData };
 };

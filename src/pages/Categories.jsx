@@ -82,12 +82,13 @@ export default function Categories() {
   }, [fetchCategories]);
 
   // Snackbar notifications
+  // Snackbar notifications
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
   // Summary Metrics calculations
-  const totalCategories = categories.length;
-  const activeCount = categories.filter((c) => c.status === 'Active').length;
-  const totalProducts = categories.reduce((sum, c) => sum + c.productCount, 0);
+  const totalCategories = categories?.length || 0;
+  const activeCount = (categories || []).filter((c) => c?.status === 'Active').length;
+  const totalProducts = (categories || []).reduce((sum, c) => sum + (Number(c?.productCount) || 0), 0);
 
   // Helper to auto-generate URL slug from name
   const handleNameChange = (name) => {
@@ -113,7 +114,7 @@ export default function Categories() {
       slug: '',
       parent: 'None (Top Level)',
       description: '',
-      order: categories.length + 1,
+      order: (categories?.length || 0) + 1,
       status: 'Active',
       color: '#1e40af',
     });
@@ -124,18 +125,18 @@ export default function Categories() {
   const handleOpenEditModal = (category) => {
     setEditingId(category.id);
     setFormData({
-      name: category.name,
-      slug: category.slug,
-      parent: category.parent,
-      description: category.description,
-      order: category.order,
-      status: category.status,
-      color: category.color,
+      name: category.name || '',
+      slug: category.slug || '',
+      parent: category.parent || 'None (Top Level)',
+      description: category.description || '',
+      order: category.order || 1,
+      status: category.status || 'Active',
+      color: category.color || '#1e40af',
     });
     setModalOpen(true);
   };
 
- // Submit Add / Edit
+  // Submit Add / Edit
   const handleFormSubmit = (e) => {
     e.preventDefault();
     if (!formData.name.trim()) {
@@ -144,8 +145,10 @@ export default function Categories() {
     }
 
     if (editingId) {
-      // 1. Update existing - Zustand 'editCategory' action එක භාවිතය
+      // 1. Update existing - Zustand 'editCategory' action
+      const existing = (categories || []).find((c) => c.id === editingId) || {};
       editCategory(editingId, {
+        ...existing,
         name: formData.name,
         slug: formData.slug || formData.name.toLowerCase().replace(/\s+/g, '-'),
         parent: formData.parent,
@@ -157,22 +160,21 @@ export default function Categories() {
       
       setSnackbar({ open: true, message: `Category "${formData.name}" updated successfully!`, severity: 'success' });
     } else {
-      // 2. Create new - Zustand 'addCategory' action එක භාවිතය
+      // 2. Create new - Zustand 'addCategory' action
       const created = {
-        id: `CAT-${Math.floor(100 + Math.random() * 900)}`, // සාමාන්‍යයෙන් මේක backend එකෙන් හැදෙන්නෙ. දැනට මෙහෙම තියමු.
+        id: `CAT-${Math.floor(100 + Math.random() * 900)}`,
         name: formData.name,
         slug: formData.slug || formData.name.toLowerCase().replace(/\s+/g, '-'),
         parent: formData.parent,
         description: formData.description,
         productCount: 0,
-        order: parseInt(formData.order, 10) || categories.length + 1,
+        order: parseInt(formData.order, 10) || (categories?.length || 0) + 1,
         status: formData.status,
         color: formData.color,
         image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=200&q=80',
       };
       
-      addCategory(created); // Zustand හරහා අලුත් එක එකතු කිරීම
-      
+      addCategory(created);
       setSnackbar({ open: true, message: `Category "${formData.name}" created successfully!`, severity: 'success' });
     }
 
@@ -182,10 +184,14 @@ export default function Categories() {
   // Toggle Visibility status (Active <-> Hidden)
   const handleToggleStatus = (id, currentStatus) => {
     const newStatus = currentStatus === 'Active' ? 'Hidden' : 'Active';
-    
-    // Zustand 'editCategory' හරහා status එක පමණක් update කිරීම
-    editCategory(id, { status: newStatus });
-    
+    const existing = (categories || []).find((c) => c.id === id);
+
+    if (existing) {
+      editCategory(id, { ...existing, status: newStatus });
+    } else {
+      editCategory(id, { status: newStatus });
+    }
+      
     setSnackbar({
       open: true,
       message: `Category visibility updated to "${newStatus}"`,
@@ -199,21 +205,27 @@ export default function Categories() {
     setSnackbar({ open: true, message: `Category "${name}" deleted.`, severity: 'info' });
   };
 
-  // Filtered & Sorted Categories
+  // Filtered & Sorted Categories (Safe handling against undefined fields)
   const filteredCategories = useMemo(() => {
-    return categories
+    return (categories || [])
       .filter((c) => {
+        if (!c) return false;
+        const name = (c.name || '').toLowerCase();
+        const slug = (c.slug || '').toLowerCase();
+        const desc = (c.description || '').toLowerCase();
+        const search = (searchTerm || '').toLowerCase();
+
         const matchesSearch =
-          c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          c.slug.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          c.description.toLowerCase().includes(searchTerm.toLowerCase());
+          name.includes(search) ||
+          slug.includes(search) ||
+          desc.includes(search);
         const matchesStatus = statusFilter === 'All' || c.status === statusFilter;
         return matchesSearch && matchesStatus;
       })
       .sort((a, b) => {
-        if (sortBy === 'name') return a.name.localeCompare(b.name);
-        if (sortBy === 'products') return b.productCount - a.productCount;
-        if (sortBy === 'order') return a.order - b.order;
+        if (sortBy === 'name') return (a.name || '').localeCompare(b.name || '');
+        if (sortBy === 'products') return (b.productCount || 0) - (a.productCount || 0);
+        if (sortBy === 'order') return (a.order || 0) - (b.order || 0);
         return 0;
       });
   }, [categories, searchTerm, statusFilter, sortBy]);
